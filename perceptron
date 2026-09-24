@@ -1,0 +1,89 @@
+import numpy as np
+import matplotlib.pyplot as plt
+
+# 1. Khởi tạo dữ liệu giả lập
+np.random.seed(2)
+
+means = [[2, 2], [4, 2]]
+cov = [[0.3, 0.2], [0.2, 0.3]]
+N = 10
+
+# Tạo 2 cụm điểm dữ liệu
+X0 = np.random.multivariate_normal(means[0], cov, N).T
+X1 = np.random.multivariate_normal(means[1], cov, N).T
+
+# Gộp dữ liệu X và nhãn y (1 cho X0, -1 cho X1)
+X = np.concatenate((X0, X1), axis=1)
+y = np.concatenate((np.ones((1, N)), -1 * np.ones((1, N))), axis=1)
+
+# Thêm hàng 1 vào X (bias trick / Xbar)
+X = np.concatenate((np.ones((1, 2 * N)), X), axis=0)
+
+
+# 2. Định nghĩa các hàm trợ giúp cho Perceptron
+def h(w, x):
+    return np.sign(np.dot(w.T, x))
+
+
+def has_converged(X, y, w):
+    return np.array_equal(h(w, X), y)
+
+
+# 3. Thuật toán Perceptron Learning Algorithm (PLA)
+def perceptron(X, y, w_init):
+    w = [w_init]
+    N = X.shape[1]
+    d = X.shape[0]
+    mis_points = []
+
+    while True:
+        # Xáo trộn dữ liệu ngẫu nhiên mỗi vòng lặp
+        mix_id = np.random.permutation(N)
+
+        for i in range(N):
+            xi = X[:, mix_id[i]].reshape(d, 1)
+            yi = y[0, mix_id[i]]
+
+            # Nếu điểm bị phân loại sai -> cập nhật trọng số w
+            if h(w[-1], xi)[0] != yi:
+                mis_points.append(mix_id[i])
+                w_new = w[-1] + yi * xi
+                w.append(w_new)
+
+                # Kiểm tra thuật toán đã hội tụ chưa
+                if has_converged(X, y, w[-1]):
+                    return w, mis_points
+
+    return w, mis_points
+
+
+# 4. Chạy thuật toán Perceptron
+d = X.shape[0]
+w_init = np.random.randn(d, 1)
+(w, m) = perceptron(X, y, w_init)
+
+print(f"Số lần cập nhật trọng số: {len(w) - 1}")
+print("Trọng số tối ưu w:\n", w[-1])
+
+# 5. Trực quan hóa kết quả bằng Matplotlib
+plt.figure(figsize=(8, 6))
+
+# Vẽ các điểm dữ liệu (X0: xanh, X1: đỏ)
+plt.plot(X0[0, :], X0[1, :], 'bs', markersize=8, label='Class 1')
+plt.plot(X1[0, :], X1[1, :], 'ro', markersize=8, label='Class -1')
+
+# Vẽ đường siêu phẳng phân chia
+w_final = w[-1]
+x1_vals = np.array([0, 6])
+x2_vals = -(w_final[0] + w_final[1] * x1_vals) / w_final[2]
+
+plt.plot(x1_vals, x2_vals, 'k-', linewidth=2, label='Decision Boundary')
+
+plt.xlim(0, 6)
+plt.ylim(0, 4)
+plt.xlabel('$x_1$')
+plt.ylabel('$x_2$')
+plt.title('Perceptron Learning Algorithm')
+plt.legend()
+plt.grid(True)
+plt.show()
